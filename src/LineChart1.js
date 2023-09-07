@@ -210,6 +210,7 @@ const LineChart1 = () => {
 
   // Dragging function
   function createDraggableLine(graph, color, height, initialYMax, yAxis) {
+
     const dragLine = graph
       .append("line")
       .attr("class", "drag-line")
@@ -218,7 +219,25 @@ const LineChart1 = () => {
       .attr("x1", 0)
       .attr("x2", width)
       .attr("y1", y(40))
-      .attr("y2", y(40));
+      .attr("y2", y(40))
+      .on("dblclick", function () { // Function to reset on double click
+        maxY = +initialYMax;
+        minY = +initialYMin;
+        y.domain([+minY, +maxY]);
+        yAxis.call(d3.axisLeft(y));
+        graph.select(".line").attr("d", line);
+
+        // Reset the dragLine y1 and y2
+        d3.select(this)
+          .attr("y1", y(40))
+          .attr("y2", y(40));
+
+        // Update the associated valueText
+        valueText
+          .attr("x", 50)
+          .attr("y", y(40) - 5)
+          .text(`${color.charAt(0).toUpperCase() + color.slice(1)} Line Value: ${40}`);
+      });
 
     const valueText = graph
       .append("text")
@@ -272,15 +291,26 @@ const LineChart1 = () => {
 
         // Dragging Logic
         if (newY === 0) {
-          maxY = +maxY + 1;
+          maxY = +maxY + 1
+          if (minY > initialYMin) {
+            minY = +minY + 1;
+          }
         } else if (newY === 430) {
           minY = +minY - 1
+          if (maxY > initialYMax) {
+            maxY = +maxY - 1
+          }
         } else {
           if (maxY > initialYMax) {
             maxY = +maxY
           } else {
             maxY = initialYMax
           }
+        }
+
+        if (parseInt(newY) === 230) {
+          maxY = +initialYMax
+          minY = +initialYMin
         }
 
         // Update the yScale and the graph path line
@@ -307,6 +337,8 @@ const LineChart1 = () => {
   const handleAddingLegs = (legNumber) => {
     setLegs((prevState) => ({ ...prevState, [legNumber]: true }));
   };
+
+
 
   return (
     <>
