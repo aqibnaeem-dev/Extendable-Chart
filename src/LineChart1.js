@@ -130,85 +130,77 @@
 import React, { useEffect, useRef, useState } from 'react';
 import * as d3 from 'd3';
 
+const generateFakeData = (count) => {
+  const data = [];
+  const startDate = new Date();
+  startDate.setDate(startDate.getDate() - count);
+  for (let i = 0; i < count; i++) {
+    const date = new Date(startDate);
+    date.setDate(startDate.getDate() + i);
+    const value = Math.random() * 100;
+    data.push({ date, value });
+  }
+  return data;
+};
+
+const data = generateFakeData(50);
+const initialYMax = d3.max(data, (d) => d.value);
+const initialYMin = d3.min(data, (d) => d.value);
+
+const margin = { top: 20, right: 20, bottom: 50, left: 50 };
+const width = 960 - margin.left - margin.right;
+const height = 500 - margin.top - margin.bottom;
+
 const LineChart1 = () => {
   const svgRef = useRef(null);
   const [legs, setLegs] = useState({ leg2: false, leg3: false, leg4: false });
-  const [yValues, setYMax] = useState({ initialMaximum: "", initialMinimum: "" })
   const [yAxis, setYAxis] = useState()
   const [graph, setG] = useState();
 
+  // Store the maximum Y values
+  let maxY = initialYMax
+  let minY = initialYMin;
 
+  // YAxis scale
+  const y = d3.scaleLinear().domain([0, initialYMax]).range([height, 0]);
 
-  const generateFakeData = (count) => {
-    const data = [];
-    const startDate = new Date();
-    startDate.setDate(startDate.getDate() - count);
-    for (let i = 0; i < count; i++) {
-      const date = new Date(startDate);
-      date.setDate(startDate.getDate() + i);
-      const value = Math.random() * 100;
-      data.push({ date, value });
-    }
-    return data;
-  };
+  // Create the line generator
+  const line = d3.line()
+    .x((d) => x(d.date))
+    .y((d) => y(d.value));
 
-  const margin = { top: 20, right: 20, bottom: 50, left: 50 };
-  const width = 960 - margin.left - margin.right;
-  const height = 500 - margin.top - margin.bottom;
-
-
-  // eslint-disable-next-line no-unused-vars
-  let initialY = height;
-  // Store the maximum Y value
-  let maxY = yValues.initialMaximum;
-  let minY = yValues.initialMinimum;
-  // eslint-disable-next-line no-unused-vars
-  let lastVal = -Infinity;
-
+  // Add X and Y axes
+  const x = d3.scaleTime()
+    .domain(d3.extent(data, (d) => d.date))
+    .range([0, width]);
 
   // Run on first render onky and draws the graph 
   useEffect(() => {
-    const data = generateFakeData(50);
-    const initialYMax = d3.max(data, (d) => d.value);
-    const initialYMin = d3.min(data, (d) => d.value);
-
-    setYMax({ initialMaximum: Number(initialYMax), initialMinimum: Number(initialYMin) })
-    const y = d3.scaleLinear().domain([0, initialYMax]).range([height, 0]);
-
     // Append the SVG object to the body of the page
     const svg = d3.select(svgRef.current)
       .attr("width", width + margin.left + margin.right)
       .attr("height", height + margin.top + margin.bottom);
 
+    // Append graph to the svg
     const graph = svg.append("g").attr("transform", `translate(${margin.left}, ${margin.top})`);
     setG(graph);
 
-    // Create the line generator
-    const line = d3.line()
-      .x((d) => x(d.date))
-      .y((d) => y(d.value));
-
-    
-
-    // Add X and Y axes
-    const x = d3.scaleTime()
-      .domain(d3.extent(data, (d) => d.date))
-      .range([0, width]);
-
+    // Append xAxis
     graph.append("g")
       .attr("transform", `translate(0, ${height})`)
       .call(d3.axisBottom(x))
 
+    // Append yAxis 
     const yAxis = graph.append("g").call(d3.axisLeft(y));
     setYAxis(yAxis)
 
-    // Add the line
+    // Add the graph middle line
     graph.append("path")
       .data([data])
       .attr("class", "line")
       .attr("fill", "none")
       .attr("stroke", "steelblue")
-      .attr("stroke-width", 0.7)
+      .attr("stroke-width", 1)
       .attr("d", line);
 
     createDraggableLine(graph, "green", height, initialYMax, yAxis);
@@ -217,10 +209,8 @@ const LineChart1 = () => {
 
 
   // Dragging function
-  function createDraggableLine(g, color, height, initialYMax, yAxis) {
-    const y = d3.scaleLinear().domain([0, initialYMax]).range([height, 0]);
-
-    const dragLine = g
+  function createDraggableLine(graph, color, height, initialYMax, yAxis) {
+    const dragLine = graph
       .append("line")
       .attr("class", "drag-line")
       .attr("stroke", color)
@@ -230,7 +220,7 @@ const LineChart1 = () => {
       .attr("y1", y(40))
       .attr("y2", y(40));
 
-    const valueText = g
+    const valueText = graph
       .append("text")
       .attr("class", "value-text")
       .attr("text-anchor", "left")
@@ -241,13 +231,14 @@ const LineChart1 = () => {
       .attr("y", y(40) - 5)
       .text(`${color.charAt(0).toUpperCase() + color.slice(1)} Line Value: ${40}`);
 
+    dragLine.style("cursor", "grabbing")
 
+    // Actual dragging function
     const drag = d3.drag()
       .on("start", () => {
         dragLine.style("cursor", "grabbing")
       })
       .on("drag", (event) => {
-
         const newY = Math.max(0, Math.min(height, event.y));
         const invertedY = y.invert(newY);
 
@@ -256,20 +247,27 @@ const LineChart1 = () => {
           .attr("y", newY - 5)
           .text(`${color.charAt(0).toUpperCase() + color.slice(1)} Line Value: ${invertedY.toFixed(2)}`);
 
+        // Update the dragging line
         dragLine.attr("y1", newY).attr("y2", newY);
 
-        const lines = document.querySelectorAll(".drag-line");
-        const linesText = document.querySelectorAll(".value-text")
-        lines.forEach((line, index) => {
-          if (line.getAttribute("stroke") === color) {
-            const propColor = line.getAttribute("data-color");
-            line.style.stroke = propColor;
-            linesText[index].style.fill = color;
+        // Active / inactive all other lines
+        const lines = d3.selectAll(".drag-line");
+        const linesText = d3.selectAll(".value-text");
+        lines.each(function (_, index) {
+          const line = d3.select(this);
+          if (line.attr("stroke") === color) {
+            const propColor = line.attr("data-color");
+            line.style("stroke", propColor);
+            linesText
+              .filter((_, i) => i === index)
+              .style("fill", color);
           } else {
-            line.style.stroke = "grey";
-            linesText[index].style.fill = "grey";
+            line.style("stroke", "grey");
+            linesText
+              .filter((_, i) => i === index)
+              .style("fill", "grey");
           }
-        })
+        });
 
 
         // Dragging Logic
@@ -285,36 +283,11 @@ const LineChart1 = () => {
           }
         }
 
-
-        // if (newY === 0) {
-        //   maxY = +maxY + Math.exp(+expansionFactor);
-        //   lastVal = newY
-        //   // setYMax(prevState => ({ ...prevState, initialMaximum: +maxY }))
-        //   y.domain([Number(yValues.initialMinimum), Number(yValues.initialMaximum)]);
-        // } else if (newY < lastVal) {
-        //   maxY = +maxY + Math.exp(+expansionFactor);
-        //   lastVal = newY
-        //   // setYMax((prevState) => ({ ...prevState, initialMaximum: +maxY }))
-        // } else if (newY >= lastVal) {
-        //   minY = +minY - Math.exp(+expansionFactor)
-        //   lastVal = newY
-        //   // setYMax(prevState => ({ ...prevState, initialMinimum: +minY }))
-        // }
-
-        // console.log("From Inside the drah", minY, maxY)
-
-        // Updating the state
-        setYMax((prevState) => ({
-          ...prevState,
-          initialMaximum: +maxY,
-          initialMinimum: +minY,
-        }));
-
-        // Update the yScale of graph
+        // Update the yScale and the graph path line
         y.domain([+minY, +maxY])
         yAxis.call(d3.axisLeft(y));
+        graph.select(".line").attr("d", line);
 
-        console.log("State value inside drag function", Number(minY), Number(maxY))
       })
       .on("end", () => dragLine.style("cursor", "grab"));
 
@@ -323,13 +296,10 @@ const LineChart1 = () => {
     return dragLine;
   }
 
-
-  console.log("State value outside the useEffect ", Number(yValues.initialMinimum), Number(yValues.initialMaximum))
-
   useEffect(() => {
-    if (legs.leg2 && !legs.leg3) { createDraggableLine(graph, "red", height, yValues?.initialMaximum, yAxis) }
-    if (legs.leg3 && !legs.leg4 && legs.leg2) { createDraggableLine(graph, "indigo", height, yValues?.initialMaximum, yAxis) }
-    if (legs.leg4 && legs.leg3 && legs.leg2) { createDraggableLine(graph, "orange", height, yValues?.initialMaximum, yAxis) }
+    if (legs.leg2 && !legs.leg3) { createDraggableLine(graph, "red", height, maxY, yAxis) }
+    if (legs.leg3 && !legs.leg4 && legs.leg2) { createDraggableLine(graph, "indigo", height, maxY, yAxis) }
+    if (legs.leg4 && legs.leg3 && legs.leg2) { createDraggableLine(graph, "orange", height, maxY, yAxis) }
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [legs])

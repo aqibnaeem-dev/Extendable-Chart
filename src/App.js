@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 import React, { useEffect, useRef, useState } from 'react';
 import * as d3 from 'd3';
 import "./App.css"
@@ -6,6 +7,7 @@ import LineChart1 from './LineChart1';
 import LineChart from './LineChart';
 import LineChartStates from './LineChart_states';
 import Graph1 from './FourLegs_static';
+import ChartExpands from './chart_expand';
 
 const Chart = ({ data, width, height }) => {
   const svgRef = useRef(null);
@@ -196,13 +198,15 @@ function App() {
       <br />
       {/* <LineChart1 />  */}
 
-      <LineChart1 />
+      {/* <LineChart1 />
 
       <br />
       <br />
       <hr />
       <br />
-      <Graph1 />
+      <Graph1 /> */}
+      {/* <ChartExpands /> */}
+      <LineChart1 />
     </div>
   );
 }
