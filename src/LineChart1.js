@@ -147,6 +147,9 @@ const data = generateFakeData(50);
 const initialYMax = d3.max(data, (d) => d.value);
 const initialYMin = d3.min(data, (d) => d.value);
 
+let currentMaximum = initialYMax;
+let currentMinimum = initialYMin;
+
 const margin = { top: 20, right: 20, bottom: 50, left: 50 };
 const width = 960 - margin.left - margin.right;
 const height = 500 - margin.top - margin.bottom;
@@ -162,7 +165,7 @@ const LineChart1 = () => {
   let minY = initialYMin;
 
   // YAxis scale
-  const y = d3.scaleLinear().domain([0, initialYMax]).range([height, 0]);
+  let y = d3.scaleLinear().domain([0, currentMaximum]).range([height, 0]);
 
   // Create the line generator
   const line = d3.line()
@@ -210,7 +213,8 @@ const LineChart1 = () => {
 
   // Dragging function
   function createDraggableLine(graph, color, height, initialYMax, yAxis) {
-
+    y.domain([+minY, +currentMaximum])
+    yAxis.call(d3.axisLeft(y));
     const dragLine = graph
       .append("line")
       .attr("class", "drag-line")
@@ -269,32 +273,14 @@ const LineChart1 = () => {
         // Update the dragging line
         dragLine.attr("y1", newY).attr("y2", newY);
 
-        // Active / inactive all other lines
-        const lines = d3.selectAll(".drag-line");
-        const linesText = d3.selectAll(".value-text");
-        lines.each(function (_, index) {
-          const line = d3.select(this);
-          if (line.attr("stroke") === color) {
-            const propColor = line.attr("data-color");
-            line.style("stroke", propColor);
-            linesText
-              .filter((_, i) => i === index)
-              .style("fill", color);
-          } else {
-            line.style("stroke", "grey");
-            linesText
-              .filter((_, i) => i === index)
-              .style("fill", "grey");
-          }
-        });
-
-
         // Dragging Logic
         if (newY === 0) {
-          maxY = +maxY + 1
-          if (minY > initialYMin) {
-            minY = +minY + 1;
-          }
+          // if (currentMaximum > maxY) {
+          //   maxY += 1;
+          // } else {
+          //   currentMaximum += 1
+          // }
+          maxY += 1;
         } else if (newY === 430) {
           minY = +minY - 1
           if (maxY > initialYMax) {
@@ -308,15 +294,34 @@ const LineChart1 = () => {
           }
         }
 
-        if (parseInt(newY) === 230) {
-          maxY = +initialYMax
-          minY = +initialYMin
-        }
-
         // Update the yScale and the graph path line
         y.domain([+minY, +maxY])
         yAxis.call(d3.axisLeft(y));
         graph.select(".line").attr("d", line);
+
+        // Active / inactive all other lines
+        const lines = d3.selectAll(".drag-line");
+        const linesText = d3.selectAll(".value-text");
+        lines.each(function (_, index) {
+          const line = d3.select(this);
+          if (line.attr("stroke") === color) {
+            const propColor = line.attr("data-color");
+            line.style("stroke", propColor);
+            linesText
+              .filter((_, i) => i === index)
+              .style("fill", color);
+          } else {
+             const lineAttr = line.attr("y1")
+             const invertedY = y.invert(lineAttr)
+             line.attr("y1", Number(y(invertedY)))
+             line.attr("y2", Number(y(invertedY)))
+             console.log("lineAttr, inverted, yInvert, currentMaximum : ", lineAttr, invertedY, y(invertedY), currentMaximum)
+            line.style("stroke", "grey");
+            linesText
+              .filter((_, i) => i === index)
+              .style("fill", "grey");
+          }
+        });
 
       })
       .on("end", () => dragLine.style("cursor", "grab"));

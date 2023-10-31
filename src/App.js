@@ -187,26 +187,26 @@ function App() {
 
   return (
     <div className="App">
-      <h1>Hello D3</h1>
-      {/* <Chart data={chartData} width={chartWidth} height={chartHeight} />
+      <h1> D3.js</h1>
+      <Chart data={chartData} width={chartWidth} height={chartHeight} />
       <br />
       <Chart1 data={chartData} width={chartWidth} height={chartHeight} margin={margin} />
       <br />
       <Chart2 />
       <br />
-      <LineChart /> */}
+      <LineChart />
       <br />
       {/* <LineChart1 />  */}
 
-      {/* <LineChart1 />
+      <LineChart1 />
 
       <br />
       <br />
       <hr />
       <br />
-      <Graph1 /> */}
-      {/* <ChartExpands /> */}
-      <LineChart1 />
+      <Graph1 />
+      <ChartExpands />
+      {/* <LineChart1 /> */}
     </div>
   );
 }
